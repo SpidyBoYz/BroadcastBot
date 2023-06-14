@@ -40,7 +40,7 @@ async def startprivate(client, message):
     joinButton = InlineKeyboardMarkup(
         [
             [
-                InlineKeyboardButton("CHANNEL 📡", url="https://t.me/Adhipurush_Hindi_Movie_Adipurush"),
+                InlineKeyboardButton("CHANNEL 📡", url="https://t.me/+s50wON7MHhg1ZWM1"),
             ]
         ]
     )
