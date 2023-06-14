@@ -11,6 +11,9 @@ from handlers.broadcast import broadcast
 from handlers.check_user import handle_user_status
 from handlers.database import Database
 
+from aiohttp import web
+from datetime import datetime
+
 LOG_CHANNEL = config.LOG_CHANNEL
 AUTH_USERS = config.AUTH_USERS
 DB_URL = config.DB_URL
@@ -18,13 +21,42 @@ DB_NAME = config.DB_NAME
 
 db = Database(DB_URL, DB_NAME)
 
+routes = web.RouteTableDef()
+BOT_USERNAME = ''
 
-Bot = Client(
-    "BroadcastBot",
-    bot_token=config.BOT_TOKEN,
-    api_id=config.API_ID,
-    api_hash=config.API_HASH,
-)
+@routes.get("/", allow_head=True)
+async def root_route_handler(request):
+    return web.json_response(F"Bot @{BOT_USERNAME} is successfully running...")
+
+async def web_server():
+    web_app = web.Application(client_max_size=30000000)
+    web_app.add_routes(routes)
+    return web_app
+
+class Bot(Client):
+    def __init__(self):
+        super().__init__(
+            "BroadcastBot",
+            bot_token=config.BOT_TOKEN,
+            api_id=config.API_ID,
+            api_hash=config.API_HASH,
+        )
+
+    async def start(self):
+        global BOT_USERNAME
+        await super().start()
+        usr_bot_me = await self.get_me()
+        self.uptime = datetime.now()
+        BOT_USERNAME = usr_bot_me.username
+        logging.info(f"@{usr_bot_me.username} Bot Running..!")
+        app = web.AppRunner(await web_server())
+        await app.setup()
+        bind_address = "0.0.0.0"
+        await web.TCPSite(app, bind_address, os.environ.get("PORT", "8080")).start()
+
+    async def stop(self, *args):
+        await super().stop()
+        logging.info("Bot stopped.")
 
 @Bot.on_message(filters.private)
 async def _(bot, cmd):
@@ -230,5 +262,4 @@ async def callback_handlers(bot: Client, cb: CallbackQuery):
     else:
         await cb.message.delete(True)
 
-
-Bot.run()
+Bot().run()
